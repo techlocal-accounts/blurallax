@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura Landing</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --pattern-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --accent-color: #ffffff;
+            --blur-size: 5px;
+            --parallax-intensity: 40px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-color);
+            cursor: none;
+        }
+
+        #background-pattern {
+            position: fixed;
+            top: calc(var(--parallax-intensity) * -0.5);
+            left: calc(var(--parallax-intensity) * -0.5);
+            width: calc(100% + var(--parallax-intensity));
+            height: calc(100% + var(--parallax-intensity));
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231a1a1a' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            z-index: 1;
+            transition: transform 0.2s ease-out;
+        }
+
+        #mouse-blur-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backdrop-filter: blur(var(--blur-size));
+            -webkit-backdrop-filter: blur(var(--blur-size));
+            pointer-events: none;
+            z-index: 2;
+            /* The mask is controlled by JavaScript to create the spotlight effect */
+        }
+
+        #content {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: var(--accent-color);
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+        }
+
+        p {
+            font-size: clamp(1rem, 4vw, 1.25rem);
+            margin-top: 1rem;
+            max-width: 600px;
+            line-height: 1.6;
+            font-weight: 300;
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+        
+        #cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--accent-color);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10000;
+            transition: transform 0.1s ease-out, width 0.2s ease, height 0.2s ease, background-color 0.2s ease, border-width 0.2s ease;
+            mix-blend-mode: difference;
+        }
+
+        #cursor.active {
+            width: 35px;
+            height: 35px;
+            border-width: 2px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        #confirm-button {
+            margin-top: 2.5rem;
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-color);
+            background-color: transparent;
+            border: 1px solid rgba(224, 224, 224, 0.5);
+            border-radius: 50px;
+            cursor: none;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            position: relative;
+        }
+
+        #confirm-button:hover {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+            border-color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="background-pattern"></div>
+    <div id="mouse-blur-effect"></div>
+    <div id="cursor"></div>
+
+    <main id="content">
+        <h1>Aura</h1>
+        <p>A clean, interactive landing page experience where the focus follows you. Built with pure HTML, CSS, and JavaScript.</p>
+        <button id="confirm-button">Confirm</button>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const background = document.getElementById('background-pattern');
+            const blurEffect = document.getElementById('mouse-blur-effect');
+            const cursor = document.getElementById('cursor');
+            const confirmButton = document.getElementById('confirm-button');
+
+            const interactiveElements = [
+                document.querySelector('h1'),
+                document.querySelector('p'),
+                confirmButton
+            ];
+
+            const intensity = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--parallax-intensity'));
+
+            // Initialize targets to the center of the screen
+            let mouseX = window.innerWidth / 2;
+            let mouseY = window.innerHeight / 2;
+            let targetX = window.innerWidth / 2;
+            let targetY = window.innerHeight / 2;
+            const delay = 0.05;
+
+            const animate = () => {
+                // Lerp for smooth following
+                mouseX += (targetX - mouseX) * delay;
+                mouseY += (targetY - mouseY) * delay;
+
+                // Update the blur effect mask to create a spotlight
+                if (blurEffect && blurEffect.style.display !== 'none') {
+                    const spotlightRadius = 100; // The clear area
+                    const spotlightFeather = 150; // The transition area for the blur
+                    const maskStyle = `radial-gradient(circle at ${mouseX}px ${mouseY}px, transparent ${spotlightRadius}px, black ${spotlightRadius + spotlightFeather}px)`;
+                    
+                    blurEffect.style.maskImage = maskStyle;
+                    blurEffect.style.webkitMaskImage = maskStyle;
+                }
+
+                // Update cursor position
+                if (cursor && cursor.style.display !== 'none') {
+                    cursor.style.transform = `translate(${targetX - (cursor.offsetWidth / 2)}px, ${targetY - (cursor.offsetHeight / 2)}px)`;
+                }
+                
+                // Calculate parallax offset
+                const xOffset = ((mouseX / window.innerWidth) - 0.5) * intensity;
+                const yOffset = ((mouseY / window.innerHeight) - 0.5) * intensity;
+                
+                // Apply parallax to background
+                if (background) {
+                    background.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                }
+
+                requestAnimationFrame(animate);
+            };
+
+            const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+            if (isTouchDevice()) {
+                // --- Mobile / Touch Device Logic ---
+                if (cursor) cursor.style.display = 'none';
+                if (confirmButton) confirmButton.style.cursor = 'pointer';
+                document.body.style.cursor = 'auto';
+
+                const handleOrientation = (event) => {
+                    // beta: front-to-back tilt (-180 to 180)
+                    // gamma: left-to-right tilt (-90 to 90)
+                    let gamma = event.gamma || 0;
+                    let beta = event.beta || 0;
+
+                    // Clamp values for stability and control
+                    const maxTilt = 30;
+                    gamma = Math.max(-maxTilt, Math.min(maxTilt, gamma));
+                    beta = Math.max(-maxTilt, Math.min(maxTilt, beta));
+
+                    // Map tilt values to screen coordinates
+                    // We map the range [-maxTilt, +maxTilt] to [0, window.innerWidth/Height]
+                    targetX = (gamma + maxTilt) / (maxTilt * 2) * window.innerWidth;
+                    targetY = (beta + maxTilt) / (maxTilt * 2) * window.innerHeight;
+                };
+                
+                // iOS 13+ requires permission for device orientation
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    confirmButton.textContent = "Enable Motion";
+                    confirmButton.addEventListener('click', () => {
+                        DeviceOrientationEvent.requestPermission()
+                            .then(permissionState => {
+                                if (permissionState === 'granted') {
+                                    window.addEventListener('deviceorientation', handleOrientation);
+                                    // Hide button after permission is granted
+                                    confirmButton.style.opacity = '0';
+                                    confirmButton.style.pointerEvents = 'none';
+                                }
+                            })
+                            .catch(console.error);
+                    });
+                } else {
+                    // For Android and other devices, enable directly
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+
+            } else {
+                // --- Desktop / Mouse Logic ---
+                const updateMousePosition = (e) => {
+                    targetX = e.clientX;
+                    targetY = e.clientY;
+                };
+                document.addEventListener('mousemove', updateMousePosition);
+
+                // Add cursor hover effects
+                interactiveElements.forEach(el => {
+                    if (el) {
+                        el.addEventListener('mouseenter', () => cursor.classList.add('active'));
+                        el.addEventListener('mouseleave', () => cursor.classList.remove('active'));
+                    }
+                });
+            }
+            
+            // Start the animation loop
+            animate();
+        });
+    </script>
+
+</body>
+</html>
