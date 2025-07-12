@@ -71,7 +71,8 @@
             font-weight: 700;
             letter-spacing: -0.04em;
             color: var(--accent-color);
-            text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+            /* text-shadow is now controlled by JS for a dynamic glow */
+            transition: text-shadow 0.4s ease-out;
         }
 
         p {
@@ -144,13 +145,12 @@
             const background = document.getElementById('background-pattern');
             const blurEffect = document.getElementById('mouse-blur-effect');
             const cursor = document.getElementById('cursor');
+            const h1 = document.querySelector('h1');
+            const p = document.querySelector('p');
             const confirmButton = document.getElementById('confirm-button');
 
-            const interactiveElements = [
-                document.querySelector('h1'),
-                document.querySelector('p'),
-                confirmButton
-            ];
+            // Elements that get the standard cursor hover effect
+            const interactiveElements = [p, confirmButton];
 
             const intensity = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--parallax-intensity'));
 
@@ -166,9 +166,32 @@
                 mouseX += (targetX - mouseX) * delay;
                 mouseY += (targetY - mouseY) * delay;
 
+                // --- Proximity Effect for H1 ---
+                let spotlightRadius = 100; // Default spotlight radius
+                if (h1 && !isTouchDevice()) {
+                    const h1Rect = h1.getBoundingClientRect();
+                    const h1CenterX = h1Rect.left + h1Rect.width / 2;
+                    const h1CenterY = h1Rect.top + h1Rect.height / 2;
+                    
+                    const distance = Math.sqrt(Math.pow(mouseX - h1CenterX, 2) + Math.pow(mouseY - h1CenterY, 2));
+                    const maxDistance = 350; // The radius around H1 to trigger the effect
+                    
+                    // Calculate proximity from 0 (far) to 1 (close)
+                    const proximity = Math.max(0, 1 - distance / maxDistance);
+
+                    // 1. Dynamic text glow
+                    const glowIntensity = proximity * 35; // Max glow blur
+                    const glowOpacity = proximity * 0.25; // Max glow opacity
+                    h1.style.textShadow = `0 0 ${glowIntensity}px rgba(255, 255, 255, ${glowOpacity})`;
+
+                    // 2. Dynamic spotlight size
+                    const baseSpotlightRadius = 100;
+                    const extraSpotlightRadius = proximity * 75; // Make spotlight bigger when near H1
+                    spotlightRadius = baseSpotlightRadius + extraSpotlightRadius;
+                }
+
                 // Update the blur effect mask to create a spotlight
                 if (blurEffect && blurEffect.style.display !== 'none') {
-                    const spotlightRadius = 100; // The clear area
                     const spotlightFeather = 150; // The transition area for the blur
                     const maskStyle = `radial-gradient(circle at ${mouseX}px ${mouseY}px, transparent ${spotlightRadius}px, black ${spotlightRadius + spotlightFeather}px)`;
                     
@@ -219,7 +242,7 @@
                 };
                 document.addEventListener('mousemove', updateMousePosition);
 
-                // Add cursor hover effects
+                // Add cursor hover effects (excluding h1, which now has a proximity effect)
                 interactiveElements.forEach(el => {
                     if (el) {
                         el.addEventListener('mouseenter', () => cursor.classList.add('active'));
