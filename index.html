@@ -201,42 +201,15 @@
                 if (confirmButton) confirmButton.style.cursor = 'pointer';
                 document.body.style.cursor = 'auto';
 
-                const handleOrientation = (event) => {
-                    // beta: front-to-back tilt (-180 to 180)
-                    // gamma: left-to-right tilt (-90 to 90)
-                    let gamma = event.gamma || 0;
-                    let beta = event.beta || 0;
-
-                    // Clamp values for stability and control
-                    const maxTilt = 30;
-                    gamma = Math.max(-maxTilt, Math.min(maxTilt, gamma));
-                    beta = Math.max(-maxTilt, Math.min(maxTilt, beta));
-
-                    // Map tilt values to screen coordinates
-                    // We map the range [-maxTilt, +maxTilt] to [0, window.innerWidth/Height]
-                    targetX = (gamma + maxTilt) / (maxTilt * 2) * window.innerWidth;
-                    targetY = (beta + maxTilt) / (maxTilt * 2) * window.innerHeight;
+                const updateTouchPosition = (e) => {
+                    if (e.touches && e.touches.length > 0) {
+                        targetX = e.touches[0].clientX;
+                        targetY = e.touches[0].clientY;
+                    }
                 };
                 
-                // iOS 13+ requires permission for device orientation
-                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    confirmButton.textContent = "Enable Motion";
-                    confirmButton.addEventListener('click', () => {
-                        DeviceOrientationEvent.requestPermission()
-                            .then(permissionState => {
-                                if (permissionState === 'granted') {
-                                    window.addEventListener('deviceorientation', handleOrientation);
-                                    // Hide button after permission is granted
-                                    confirmButton.style.opacity = '0';
-                                    confirmButton.style.pointerEvents = 'none';
-                                }
-                            })
-                            .catch(console.error);
-                    });
-                } else {
-                    // For Android and other devices, enable directly
-                    window.addEventListener('deviceorientation', handleOrientation);
-                }
+                document.addEventListener('touchstart', updateTouchPosition, { passive: true });
+                document.addEventListener('touchmove', updateTouchPosition, { passive: true });
 
             } else {
                 // --- Desktop / Mouse Logic ---
